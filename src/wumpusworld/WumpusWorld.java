@@ -207,7 +207,7 @@ public class WumpusWorld {
                     MyAgent a;
                     @Override
                     public Object call() throws Exception {
-                        int numMutations = 500;
+                        int numMutations = 10;
                         for(int j = 0; j < numMutations; j++)
                         {
                             int layer = rand.nextInt(a.weights.size());
@@ -288,7 +288,7 @@ public class WumpusWorld {
             actions++;
         }
         double score = (double)agent.w.getScore();
-        if(actions==50 || !agent.w.hasGold())
+        if(actions==100 || !agent.w.hasGold())
         {
             score -= 100000;
         }
