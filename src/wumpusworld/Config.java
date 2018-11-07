@@ -33,6 +33,7 @@ public class Config
                     if (tokens[1].equalsIgnoreCase("simulatordb")) option = "simdb";
                     if (tokens[1].equalsIgnoreCase("train")) option = "train";
                     if (tokens[1].equalsIgnoreCase("training")) option = "train";
+                    if (tokens[1].equalsIgnoreCase("train2")) option = "train2";
                 }
                 line = r.readLine();
             }

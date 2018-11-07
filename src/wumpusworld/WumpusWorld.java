@@ -12,16 +12,17 @@ import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
+
 /**
- * Starting class for the Wumpus World program. The program
- * has three options: 1) Run a GUI where the Wumpus World can be
- * solved step by step manually or by an agent, or 2) run
- * a simulation with random worlds over a number of games,
+ * Starting class for the Wumpus World program. The program has three options:
+ * 1) Run a GUI where the Wumpus World can be solved step by step manually or by
+ * an agent, or 2) run a simulation with random worlds over a number of games,
  * or 3) run a simulation over the worlds read from a map file.
  *
  * @author Johan Hagelbäck
  */
-public class WumpusWorld {
+public class WumpusWorld
+{
 
     /**
      * @param args the command line arguments
@@ -30,6 +31,8 @@ public class WumpusWorld {
     {
         WumpusWorld ww = new WumpusWorld();
     }
+
+    Random rand = new Random();
 
     /**
      * Starts the program.
@@ -51,9 +54,13 @@ public class WumpusWorld {
         {
             runSimulatorDB();
         }
-        if(option.equalsIgnoreCase("train"))
+        if (option.equalsIgnoreCase("train"))
         {
             runTrainer();
+        }
+        if (option.equalsIgnoreCase("train2"))
+        {
+            runTrainer2();
         }
     }
 
@@ -66,8 +73,7 @@ public class WumpusWorld {
     }
 
     /**
-     * Starts the program in simulator mode with
-     * maps read from a data file.
+     * Starts the program in simulator mode with maps read from a data file.
      */
     private void runSimulatorDB()
     {
@@ -78,32 +84,30 @@ public class WumpusWorld {
         for (int i = 0; i < maps.size(); i++)
         {
             World w = maps.get(i).generateWorld();
-            totScore += (double)runSimulation(w);
+            totScore += (double) runSimulation(w);
         }
-        totScore = totScore / (double)maps.size();
+        totScore = totScore / (double) maps.size();
         System.out.println("Average score: " + totScore);
     }
 
     /**
-     * Starts the program in simulator mode
-     * with random maps.
+     * Starts the program in simulator mode with random maps.
      */
     private void runSimulator()
     {
-        int numSims = 1000;
+        int numSims = 100000;
         double totScore = 0;
         for (int i = 0; i < numSims; i++)
         {
             WorldMap w = MapGenerator.getRandomMap(i);
-            totScore += (double)runSimulation(w.generateWorld());
+            totScore += (double) runSimulation(w.generateWorld());
         }
-        totScore = totScore / (double)numSims;
+        totScore = totScore / (double) numSims;
         System.out.println("Average score: " + totScore);
     }
 
     /**
-     * Runs the solver agent for the specified Wumpus
-     * World.
+     * Runs the solver agent for the specified Wumpus World.
      *
      * @param w Wumpus World
      * @return Achieved score
@@ -111,7 +115,7 @@ public class WumpusWorld {
     private int runSimulation(World w)
     {
         int actions = 0;
-        Agent a = new MyAgent(w);
+        Agent a = new NormalAgent(w);
         while (!w.gameOver() && actions < 50)
         {
             a.doAction();
@@ -119,124 +123,162 @@ public class WumpusWorld {
         }
         int score = w.getScore();
         System.out.println("Simulation ended after " + actions + " actions. Score " + score);
+        
+        
         return score;
     }
 
     ExecutorService executor = Executors.newFixedThreadPool(16);
-    
+
+    /*
+    ****************************************************************************
+    ********************* Parameters *******************************************
+    ****************************************************************************
+     */
+    int numMutations = 20;
+    int numGeneration = 500;
+    int numSims = 4032000;
+    boolean usePresetMaps = true;
+
+    /*
+    ****************************************************************************
+    ****************************************************************************
+    ****************************************************************************
+     */
+
     private void runTrainer()
     {
         MapReader mr = new MapReader();
         final Vector<WorldMap> maps = mr.readMaps();
-        
+
         ArrayList<MyAgent> agents = new ArrayList<>();
 
         final Random rand = new Random();
+        
         // generate good starting agents
         int numStartAgents = 10;
         int maxTries = 2000;
-        int numSims = 100;
         while (agents.size() < numStartAgents && maxTries-- > 0)
         {
-            MyAgent a = new MyAgent((World)null);
-            for (int i = 0; i < numSims; i++)
+            MyAgent a = new MyAgent((World) null);
+            int _numSims = 1;
+            if (usePresetMaps)
             {
-                WorldMap wm = MapGenerator.getRandomMap(rand.nextInt());
-                a.w = wm.generateWorld();
-                runTrainingSim(a);
+                _numSims = maps.size();
+                for (int i = 0; i < maps.size(); i++)
+                {
+                    a.w = maps.get(i).generateWorld();
+                    runTrainingSim(a);
+                }
+            } else
+            {
+                for (int i = 0; i < _numSims; i++)
+                {
+                    WorldMap w = MapGenerator.getRandomMap(rand.nextInt());
+                    a.w = w.generateWorld();
+                    runTrainingSim(a);
+                }
             }
-            a.avgScore /= (double)numSims;
+            a.avgScore /= (double) _numSims;
             System.out.println("score: " + Double.toString(a.avgScore));
-            if(a.avgScore > -1100.0 || true)
+            if (a.avgScore > -1100.0 || true)
             {
                 agents.add(a);
                 System.out.println("Adding agent with score: " + Double.toString(a.avgScore));
             }
-            if (maxTries % 100 == 0)
-                System.out.println("Tries left: " + Integer.toString(maxTries));
         }
         Collections.sort(agents);
         System.out.println("Starting with:");
         for (MyAgent a : agents)
         {
-            System.out.print((int)a.avgScore);
+            System.out.print((int) a.avgScore);
             System.out.print(", ");
         }
         System.out.println();
 
-
         ArrayList<MyAgent> best = new ArrayList<>();
-        for(int i = 0; i < 10; i++)
+        for (int i = 0; i < 10; i++)
         {
             best.add(agents.get(i));
         }
         agents.clear();
 
-
-        int numGeneration = 4000;
         for (int i = 0; i < numGeneration; i++)
         {
             Collections.sort(best);
-            int numBest = 3;
-            if(best.size() > numBest)
-                best.subList(numBest, best.size()).clear();
-            for(int j = 0; j < best.size(); j++)
+            int numBest = 4;
+            if (best.size() > numBest)
             {
-                for(int k = 0; k < 2; k++)
+                best.subList(numBest, best.size()).clear();
+            }
+            for (int j = 0; j < best.size(); j++)
+            {
+                for (int k = 0; k < 3; k++)
                 {
                     agents.add(new MyAgent(best.get(j)));
                 }
             }
-            
-
 
             System.out.println("All time best:");
-            for(MyAgent a : best)
+            for (MyAgent a : best)
             {
                 System.out.print(a.avgScore);
                 System.out.print(", ");
             }
             System.out.println();
 
-            
             Vector<FutureTask> tasks = new Vector<>();
 
             for (MyAgent a : agents)
             {
-                tasks.add(new FutureTask(new Callable() {
+                tasks.add(new FutureTask(new Callable()
+                {
                     MyAgent a;
+
                     @Override
-                    public Object call() throws Exception {
-                        int numMutations = 10;
-                        for(int j = 0; j < numMutations; j++)
+                    public Object call() throws Exception
+                    {
+
+                        for (int j = 0; j < numMutations; j++)
                         {
                             int layer = rand.nextInt(a.weights.size());
                             int weightIndex = rand.nextInt(a.weights.get(layer).size());
                             double current = a.weights.get(layer).get(weightIndex);
                             double change = (rand.nextInt(10) - 5) / 100;
-                            change = 0.25*(rand.nextDouble()*2.0-1.0);
+                            change = 0.25 * (rand.nextDouble() * 2.0 - 1.0);
                             //a.weights.get(layer).set(weightIndex, current + change);
-                            a.weights.get(layer).set(weightIndex, rand.nextDouble()*2.0 - 1);
+                            a.weights.get(layer).set(weightIndex, rand.nextDouble() * 2.0 - 1);
 
                             layer = rand.nextInt(a.biases.size());
                             int biasIndex = rand.nextInt(a.biases.get(layer).size());
                             current = a.biases.get(layer).get(biasIndex);
                             //change = (rand.nextInt(10) - 5) / 100;
-                            change = 0.25*(rand.nextDouble()*2.0-1.0);
+                            change = 0.25 * (rand.nextDouble() * 2.0 - 1.0);
                             //a.biases.get(layer).set(biasIndex, current+change);
-                            a.biases.get(layer).set(biasIndex, rand.nextDouble()*2.0 - 1);
+                            a.biases.get(layer).set(biasIndex, rand.nextDouble() * 2.0 - 1);
                         }
-                        int numSims = maps.size();
-                        for (int i = 0; i < numSims; i++)
+                        int _numSims = numSims;
+                        if (usePresetMaps)
                         {
-                            //WorldMap w = MapGenerator.getRandomMap(rand.nextInt());
-                            //a.w = w.generateWorld();
-                            a.w = maps.get(i).generateWorld();
-                            runTrainingSim(a);
+                            _numSims = maps.size();
+                            for (int i = 0; i < _numSims; i++)
+                            {
+                                a.w = maps.get(i).generateWorld();
+                                runTrainingSim(a);
+                            }
+                        } else
+                        {
+                            for (int i = 0; i < _numSims; i++)
+                            {
+                                WorldMap w = MapGenerator.getRandomMap(rand.nextInt());
+                                a.w = w.generateWorld();
+                                runTrainingSim(a);
+                            }
                         }
-                        a.avgScore /= (double)numSims;
+                        a.avgScore /= (double) _numSims;
                         return null;
                     }
+
                     private Callable init(MyAgent a)
                     {
                         this.a = a;
@@ -245,22 +287,24 @@ public class WumpusWorld {
                 }.init(a)));
                 executor.execute(tasks.lastElement());
             }
-            
-            try {
-                for(FutureTask t : tasks)
+
+            try
+            {
+                for (FutureTask t : tasks)
                 {
-                    while(!t.isDone())
+                    while (!t.isDone())
                     {
                         Thread.sleep(50L);
                     }
                 }
-            } catch (InterruptedException ex) {
+            } catch (InterruptedException ex)
+            {
                 Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             Collections.sort(agents);
             System.out.println("Best scores generation " + Integer.toString(i) + ":");
-            for(int j = 0; j < numBest; j++)
+            for (int j = 0; j < numBest; j++)
             {
                 MyAgent a = agents.get(j);
                 best.add(a);
@@ -271,29 +315,134 @@ public class WumpusWorld {
             agents.clear();
         }
         executor.shutdown();
-        try {
+        try
+        {
             best.get(0).saveNetwork(numGeneration);
-        } catch (FileNotFoundException ex) {
+        } catch (FileNotFoundException ex)
+        {
             Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-
     private void runTrainingSim(MyAgent agent)
     {
         int actions = 0;
-        while(!agent.w.gameOver() && actions < 50)
+        while (!agent.w.gameOver() && actions < 100)
         {
             agent.doAction();
             actions++;
         }
-        double score = (double)agent.w.getScore();
-        if(actions==100 || !agent.w.hasGold())
+        double score = (double) agent.w.getScore();
+        if (!agent.w.hasGold())
         {
             score -= 100000;
         }
-        if(agent.w.hasGold())
-            score += 10000;
+        if (!agent.w.wumpusAlive())
+        {
+            score += 1000;
+        }
+        if (agent.w.hasGold())
+        {
+            //score += 1000;
+        }
         agent.avgScore += score;
+    }
+    
+    private void runTrainer2()
+    {
+        MapReader mr = new MapReader();
+        final Vector<WorldMap> maps = mr.readMaps();
+
+        MyAgent agent = new MyAgent((World) null);
+        
+        NormalAgent solver = new NormalAgent((World) null);
+        
+        int maxActions = 50;
+        double[][] inputs = new double[maxActions][MyAgent.numInputs];
+        double[][] outputs = new double[maxActions][MyAgent.numOutputs];
+
+        double bestScore = -150000.0;
+        
+        //int offset = rand.nextInt();
+        for (int i = 0; i < numSims; i++)
+        {
+            
+            //WorldMap w = MapGenerator.getRandomMap(offset + i);
+            //solver.w = w.generateWorld();
+            
+            solver.w = maps.get(i%7).generateWorld();
+            
+            int actions = 0;
+            while (!solver.w.gameOver() && actions < maxActions)
+            {
+                double[] currIn = inputs[actions];
+                double[] currOut = outputs[actions];
+                solver.setValues(currIn, currOut);
+                solver.doAction();
+                actions++;
+            }
+            //System.out.println(solver.w.getScore());
+            
+            agent.backpropagate(inputs, outputs, actions);
+            
+            if (i % 200 == 199)
+            {
+                System.out.println("Testing generation " + Integer.toString(i));
+                double score = testInTraining(agent);
+                if(score > bestScore)
+                {
+                    try
+                    {
+                        agent.saveNetwork(i);
+                        
+                    } catch (FileNotFoundException ex)
+                    {
+                        Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    bestScore = score;
+                }
+            }
+        }
+
+        try
+        {
+            agent.saveNetwork(numSims);
+        } catch (FileNotFoundException ex)
+        {
+            Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private double testInTraining(MyAgent a)
+    {
+        MapReader mr = new MapReader();
+        final Vector<WorldMap> maps = mr.readMaps();
+        
+        double score = 0.0;
+
+        int testSims = 7;
+        for (int i = 0; i < testSims; i++)
+        {
+            //WorldMap w = MapGenerator.getRandomMap(i);
+            //a.w = w.generateWorld();
+            
+            a.w = maps.get(i).generateWorld();
+            
+            int actions = 0;
+            while (!a.w.gameOver() && actions < 50)
+            {
+                a.doAction();
+                actions++;
+            }
+            if(!a.w.hasGold())
+                score -= 700000.0;
+
+            score += a.w.getScore();
+        }
+        score /= (double) testSims;
+
+        System.out.println("Average score = " + Double.toString(score));
+        
+        return score;
     }
 }
