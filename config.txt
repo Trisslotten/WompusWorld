@@ -4,5 +4,5 @@
 #simdb - Runs a simulation of all maps in the maps file.
 #train - Runs a training session using genetic algorithms
 #train2 - Runs a training session using backpropagation
-Option=GUI
+Option=train2
 Mapfile=maps.txt

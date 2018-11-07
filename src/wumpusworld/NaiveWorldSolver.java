@@ -61,56 +61,32 @@ public class NaiveWorldSolver
                 addPossiblePit(x, y - 1);
             }
         }
+
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
             int y = i / 4;
-            if (w.isVisited(x + 1, y + 1))
+            int ox = 1;
+            int oy = 0;
+
+            int stenchCount = 0;
+            for (int j = 0; j < 4; j++)
             {
-                tiles[i].visible = true;
-                if (!w.hasStench(x + 1, y + 1))
+                int wx = x + ox;
+                int wy = y + oy;
+                if (w.hasStench(wx + 1, wy + 1))
                 {
-                    clearPossibleWompus(x + 1, y);
-                    clearPossibleWompus(x - 1, y);
-                    clearPossibleWompus(x, y + 1);
-                    clearPossibleWompus(x, y - 1);
+                    stenchCount++;
                 }
-                if (!w.hasBreeze(x + 1, y + 1))
-                {
-                    clearPossiblePit(x + 1, y);
-                    clearPossiblePit(x - 1, y);
-                    clearPossiblePit(x, y + 1);
-                    clearPossiblePit(x, y - 1);
-                }
+                int temp = ox;
+                ox = -oy;
+                oy = temp;
             }
-        }
-        for (int i = 0; i < 16; i++)
-        {
-            int x = i % 4;
-            int y = i / 4;
-            if (w.hasStench(x + 1, y + 1))
+            
+            if (!w.isVisited(x+1, y+1) && stenchCount >= 2)
             {
-                int ox = 1;
-                int oy = 1;
-                for (int j = 0; j < 4; j++)
-                {
-                    int wx = x + ox;
-                    int wy = y + oy;
-                    if (w.isValidPosition(wx + 1, wy + 1) && w.hasStench(wx + 1, wy + 1))
-                    {
-                        if (w.isVisited(wx + 1, y + 1))
-                        {
-                            tiles[x + wy * 4].hasWompus = true;
-                        }
-                        if (w.isVisited(x + 1, wy + 1))
-                        {
-                            tiles[wx + y * 4].hasWompus = true;
-                        }
-                    }
-                    int temp = ox;
-                    ox = -oy;
-                    oy = temp;
-                }
+                tiles[i].hasWompus = true;
+                tiles[i].wompusProbability = 1.0;
             }
         }
         for (int i = 0; i < 16; i++)
@@ -146,7 +122,7 @@ public class NaiveWorldSolver
                     if (w.isValidPosition(cx + 1, cy + 1))
                     {
                         Tile t = tiles[cx + cy * 4];
-                        if (w.hasBreeze(x+1, y + 1))
+                        if (w.hasBreeze(x + 1, y + 1))
                         {
                             if (w.isUnknown(cx + 1, cy + 1))
                             {
@@ -156,11 +132,11 @@ public class NaiveWorldSolver
                                 t.pitProbability = 1.0;
                             }
                         }
-                        if(w.hasStench(x+1, y+1))
+                        if (w.hasStench(x + 1, y + 1))
                         {
-                            if(w.isUnknown(cx+1, cy+1))
+                            if (w.isUnknown(cx + 1, cy + 1))
                             {
-                                t.wompusProbability = Math.max(1.0/numHidden, t.wompusProbability);
+                                t.wompusProbability = Math.max(1.0 / numHidden, t.wompusProbability);
                             }
                         }
                     }
@@ -170,60 +146,93 @@ public class NaiveWorldSolver
                     oy = temp;
                 }
             }
-
         }
-
-        int px = w.getPlayerX() - 1;
-        int py = w.getPlayerY() - 1;
-
-        // target position
-        int tx = -1;
-        int ty = -1;
-        int len = Integer.MAX_VALUE;
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
             int y = i / 4;
-            if (isReachable(x, y) && isSafe(x, y) && !tiles[x + y * 4].visible)
+            if (w.isVisited(x + 1, y + 1))
             {
-                int dx = Math.abs(px - x);
-                int dy = Math.abs(py - y);
-                int newLen = dx + dy;
-//                    System.out.println("x = " + Integer.toString(x));
-//                    System.out.println("y = " + Integer.toString(y));
-//                    System.out.println("Length = " + Integer.toString(newLen));
-                if (newLen < len)
+                tiles[i].visible = true;
+                if (!w.hasStench(x + 1, y + 1))
                 {
-                    len = newLen;
-                    tx = x;
-                    ty = y;
+                    clearPossibleWompus(x + 1, y);
+                    clearPossibleWompus(x - 1, y);
+                    clearPossibleWompus(x, y + 1);
+                    clearPossibleWompus(x, y - 1);
+                }
+                if (!w.hasBreeze(x + 1, y + 1))
+                {
+                    clearPossiblePit(x + 1, y);
+                    clearPossiblePit(x - 1, y);
+                    clearPossiblePit(x, y + 1);
+                    clearPossiblePit(x, y - 1);
                 }
             }
         }
-//            System.out.println("////////////////////////////////////////");
+        
+        
+        
+        int px = w.getPlayerX() - 1;
+        int py = w.getPlayerY() - 1;
 
-        if (tx == -1 && ty == -1)
+        ArrayList<Integer> possibleTargets = new ArrayList<>();
+        for (int i = 0; i < 16; i++)
         {
-            double lowestPitProb = 2.0;
+            int x = i % 4;
+            int y = i / 4;
+            if (isReachable(x, y) && !tiles[x + y * 4].visible)// && isSafe(x, y) )
+            {
+                possibleTargets.add(x + y * 4);
+            }
+        }
+
+        double lowestPitProb = 2.0;
+        int length = Integer.MAX_VALUE;
+        int best = -1;
+        for (int i = 0; i < possibleTargets.size(); i++)
+        {
+            int index = possibleTargets.get(i);
+            int currLength = searchAvoidPit(index);
+            Tile t = tiles[index];
+            
+            
+            if (currLength < Integer.MAX_VALUE && t.wompusProbability <= 0.0)
+            {
+                if (t.pitProbability < lowestPitProb)
+                {
+                    lowestPitProb = t.pitProbability;
+                    best = index;
+                } else if(t.pitProbability == lowestPitProb && currLength < length)
+                {
+                    length = currLength;
+                    best = index;
+                }
+            }
+        }
+        
+
+        if (best == -1)
+        {
+            lowestPitProb = 2.0;
             for (int i = 0; i < 16; i++)
             {
                 int x = i % 4;
                 int y = i / 4;
-                Tile t = tiles[x + y * 4];
+                Tile t = tiles[i];
                 if (isReachable(x, y) && !t.visible && t.wompusProbability <= 0.0)
                 {
                     if (t.pitProbability < lowestPitProb)
                     {
                         lowestPitProb = t.pitProbability;
-                        tx = x;
-                        ty = y;
+                        best = i;
                     }
                 }
             }
         }
-        if (tx == -1 && ty == -1)
+        if (best == -1)
         {
-            double lowestPitProb = 2.0;
+            lowestPitProb = 2.0;
             for (int i = 0; i < 16; i++)
             {
                 int x = i % 4;
@@ -234,20 +243,14 @@ public class NaiveWorldSolver
                     if (t.pitProbability < lowestPitProb)
                     {
                         lowestPitProb = t.pitProbability;
-                        tx = x;
-                        ty = y;
+                        best = i;
                     }
                 }
             }
         }
-        
 
-        targetTile = tx + ty * 4;
-        /*
-        System.out.println(tx);
-        System.out.println(ty);
-        System.out.println();
-         */
+        targetTile = best;
+        
         int ox = 1;
         int oy = 0;
         for (int i = 0; i < 4; i++)
@@ -257,7 +260,7 @@ public class NaiveWorldSolver
             if (w.isValidPosition(x + 1, y + 1))
             {
                 Tile t = tiles[x + y * 4];
-                if (t.hasWompus)
+                if (t.hasWompus || t.wompusProbability == 1.0)
                 {
                     shootDirX = ox;
                     shootDirY = oy;
@@ -269,9 +272,10 @@ public class NaiveWorldSolver
             ox = -oy;
             oy = temp;
         }
+        
     }
 
-    private int search(int sx, int sy, int target)
+    private int searchAvoidPit(int target)
     {
         int cx = w.getPlayerX() - 1;
         int cy = w.getPlayerY() - 1;
@@ -280,8 +284,7 @@ public class NaiveWorldSolver
         ArrayList<Integer> open = new ArrayList<>();
         ArrayList<Integer> closed = new ArrayList<>();
 
-        open.add(sx + sy * 4);
-        closed.add(cx + cy * 4);
+        open.add(cx + cy * 4);
 
         int steps = 0;
         while (!open.isEmpty())
@@ -305,7 +308,7 @@ public class NaiveWorldSolver
                     {
                         return steps;
                     }
-                    if (!open.contains(index) && !closed.contains(index) && tiles[index].visible)
+                    if (!open.contains(index) && !closed.contains(index) && tiles[index].visible && !w.hasPit(x + 1, y + 1))
                     {
                         open.add(index);
                     }
@@ -357,6 +360,7 @@ public class NaiveWorldSolver
         if (w.isValidPosition(x + 1, y + 1))
         {
             tiles[x + y * 4].possibleWompus = false;
+            tiles[x + y * 4].wompusProbability = 0.0;
         }
     }
 
@@ -365,6 +369,7 @@ public class NaiveWorldSolver
         if (w.isValidPosition(x + 1, y + 1))
         {
             tiles[x + y * 4].possiblePit = false;
+            tiles[x + y * 4].pitProbability = 0.0;
         }
     }
 

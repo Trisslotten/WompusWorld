@@ -44,31 +44,23 @@ public class MyAgent implements Agent, Comparable
     // for backpropagation 
     ArrayList<ArrayList<Double>> zs = new ArrayList<ArrayList<Double>>();
 
-    // stench -> binary
-    // breeze -> binary
-    // pos -> 4*4 = 16
-    // prevPos -> (dx,dy)
-    // canShoot -> binary
-    // nearPit -> binary
-    // breezeMap -> 4*4 = 16 (-1 no breeze, 0 unknown, 1 breeze)
-    // stenchMap -> 4*4 = 16 (-1 no stench, 0 unknown, 1 stench)
-    // valid walk dir -> 4
-    // time -> 1
     // visible map -> 16
-    // danger map -> 16
-    static public int numInputs = 16 + 16;
+    // breeze map  -> 16
+    // pit map     -> 16
+    // stench map  -> 16
+    static public int numInputs = 16 + 16 + 16 + 16;
     // target map -> 16
     // shoot dir -> 4
     static public int numOutputs = 16 + 4;
-    //layout of NN. Fitst value is size of input layer, last is output layer. Arbitrary number of hidden layers and their sizes.
+    //layout of NN. First value is size of input layer, last is output layer. Arbitrary number of hidden layers and their sizes.
     int[] layerSizes =
     {
         numInputs, numInputs+20, numInputs+20, numInputs+20, numOutputs
     };
 
     boolean shouldLoadNetwork = true;
-    int generationToLoad = 795799;
-    double trainingSpeed = 0.01;
+    int generationToLoad = 4799;
+    double trainingSpeed = 0.1;
 
     /**
      * Creates a new instance of your solver agent.
@@ -285,32 +277,40 @@ public class MyAgent implements Agent, Comparable
 
     public void setInputs()
     {
-        // visible map
-        for (int i = 0; i < 16; i++)
-        {
-            int x = i % 4;
-            int y = i / 4;
-            if (w.isVisited(x + 1, y + 1))
-            {
-                layers.get(0).set(i, 1.0);
-            } else
-            {
-                layers.get(0).set(i, 0.0);
-            }
-        }
+        // visible map -> 16
+        // breeze map  -> 16
+        // pit map     -> 16
+        // stench map  -> 16
 
-        //stench map
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
             int y = i / 4;
-            if (w.hasStench(x + 1, y + 1))
-            {
+            
+            // visible
+            if (w.isVisited(x + 1, y + 1))
+                layers.get(0).set(i, 1.0);
+            else
+                layers.get(0).set(i, 0.0);
+
+            // breeze
+            if (w.hasBreeze(x + 1, y + 1))
                 layers.get(0).set(16 + i, 1.0);
-            } else
-            {
+            else
                 layers.get(0).set(16 + i, 0.0);
-            }
+
+            // pit
+            if (w.hasPit(x + 1, y + 1))
+                layers.get(0).set(16+16+ i, 1.0);
+            else
+                layers.get(0).set(16+16+ i, 0.0);
+            
+            // stench
+            if (w.hasPit(x + 1, y + 1))
+                layers.get(0).set(16+16+16+ i, 1.0);
+            else
+                layers.get(0).set(16+16+16+ i, 0.0);
+            
         }
     }
 
@@ -505,22 +505,22 @@ public class MyAgent implements Agent, Comparable
             {
                 double curr = weights.get(i).get(j);
                 double dweight = dw.get(i).get(j);
-                double result = curr - trainingSpeed * dweight/(double)numData;
+                double result = curr - trainingSpeed * dweight / (double) numData;
                 weights.get(i).set(j, result);
             }
         }
-        
+
         for (int i = 0; i < db.size(); i++)
         {
             for (int j = 0; j < db.get(i).size(); j++)
             {
                 double curr = biases.get(i).get(j);
                 double dbias = db.get(i).get(j);
-                double result = curr - trainingSpeed * dbias/(double)numData;
+                double result = curr - trainingSpeed * dbias / (double) numData;
                 biases.get(i).set(j, result);
             }
         }
-        
+
     }
 
     int actionIndex()
@@ -576,9 +576,8 @@ public class MyAgent implements Agent, Comparable
         feedforward();
 
         index = actionIndex();
-        
+
         //System.out.println("Index " + Integer.toString(index));
-        
         if (index < 16)
         {
             // walk dir
@@ -604,7 +603,7 @@ public class MyAgent implements Agent, Comparable
                     //if(tiles[x+y*4].visible)
                     if (w.isVisited(x + 1, y + 1))
                     {
-                        int steps = search(x, y, target);
+                        int steps = search(x, y, target, true);
                         if (steps < minSteps)
                         {
                             dx = ox;
@@ -618,7 +617,40 @@ public class MyAgent implements Agent, Comparable
                 ox = -oy;
                 oy = temp;
             }
-            
+            if (dx == 0 && dy == 0)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    int x = cx - 1 + ox;
+                    int y = cy - 1 + oy;
+                    if (w.isValidPosition(x + 1, y + 1))
+                    {
+                        if (x + y * 4 == target)
+                        {
+                            //System.out.println("TARGET");
+                            dx = ox;
+                            dy = oy;
+                            break;
+                        }
+                        //if(tiles[x+y*4].visible)
+                        if (w.isVisited(x + 1, y + 1))
+                        {
+                            int steps = search(x, y, target, false);
+                            if (steps < minSteps)
+                            {
+                                dx = ox;
+                                dy = oy;
+                                minSteps = steps;
+                            }
+                        }
+                    }
+                    // 90 degree rotate offset 
+                    int temp = ox;
+                    ox = -oy;
+                    oy = temp;
+                }
+            }
+
             if (dx == 1)
             {
                 goEast();
@@ -658,24 +690,33 @@ public class MyAgent implements Agent, Comparable
         py = cy;
     }
 
-    private int search(int sx, int sy, int target)
+    private int search(int sx, int sy, int target, boolean avoidPit)
     {
         int cx = w.getPlayerX() - 1;
         int cy = w.getPlayerY() - 1;
 
         // x = i%4; y = i/4;
         ArrayList<Integer> open = new ArrayList<>();
+        ArrayList<Integer> openSteps = new ArrayList<>();
         ArrayList<Integer> closed = new ArrayList<>();
 
         open.add(sx + sy * 4);
+        openSteps.add(1);
         closed.add(cx + cy * 4);
 
-        int steps = 0;
+        if (avoidPit && w.hasPit(sx + 1, sy + 1))
+        {
+            return Integer.MAX_VALUE;
+        }
+
         while (!open.isEmpty())
         {
-            steps++;
+            int steps = openSteps.get(0);
+            openSteps.remove(0);
+
             int pos = open.get(0);
             open.remove(0);
+
             closed.add(pos);
             int nx = pos % 4;
             int ny = pos / 4;
@@ -690,11 +731,12 @@ public class MyAgent implements Agent, Comparable
                     int index = x + y * 4;
                     if (index == target)
                     {
-                        return steps;
+                        return steps + 1;
                     }
-                    if (!open.contains(index) && !closed.contains(index) && w.isVisited(index % 4 + 1, index / 4 + 1))
+                    if (!open.contains(index) && !closed.contains(index) && w.isVisited(x + 1, y + 1) && (!w.hasPit(x + 1, y + 1) || !avoidPit))
                     {
                         open.add(index);
+                        openSteps.add(steps + 1);
                     }
                 }
                 // rotate offset by 90 degrees

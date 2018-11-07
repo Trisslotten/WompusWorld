@@ -137,8 +137,8 @@ public class WumpusWorld
      */
     int numMutations = 20;
     int numGeneration = 500;
-    int numSims = 4032000;
-    boolean usePresetMaps = true;
+    int numSims = 100000;
+    boolean usePresetMaps = false;
 
     /*
     ****************************************************************************
@@ -361,16 +361,16 @@ public class WumpusWorld
         double[][] inputs = new double[maxActions][MyAgent.numInputs];
         double[][] outputs = new double[maxActions][MyAgent.numOutputs];
 
-        double bestScore = -150000.0;
+        double bestScore = -100000.0;
         
-        //int offset = rand.nextInt();
+        int offset = rand.nextInt();
         for (int i = 0; i < numSims; i++)
         {
             
-            //WorldMap w = MapGenerator.getRandomMap(offset + i);
-            //solver.w = w.generateWorld();
+            WorldMap w = MapGenerator.getRandomMap(offset + i);
+            solver.w = w.generateWorld();
             
-            solver.w = maps.get(i%7).generateWorld();
+            //solver.w = maps.get(i%7).generateWorld();
             
             int actions = 0;
             while (!solver.w.gameOver() && actions < maxActions)
@@ -420,13 +420,13 @@ public class WumpusWorld
         
         double score = 0.0;
 
-        int testSims = 7;
+        int testSims = 100;
         for (int i = 0; i < testSims; i++)
         {
-            //WorldMap w = MapGenerator.getRandomMap(i);
-            //a.w = w.generateWorld();
+            WorldMap w = MapGenerator.getRandomMap(i);
+            a.w = w.generateWorld();
             
-            a.w = maps.get(i).generateWorld();
+            //a.w = maps.get(i).generateWorld();
             
             int actions = 0;
             while (!a.w.gameOver() && actions < 50)
@@ -434,8 +434,9 @@ public class WumpusWorld
                 a.doAction();
                 actions++;
             }
+            // since we divice by testSims we can now how many failed
             if(!a.w.hasGold())
-                score -= 700000.0;
+                score -= testSims * 1000;
 
             score += a.w.getScore();
         }

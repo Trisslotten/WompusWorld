@@ -17,56 +17,58 @@ public class NormalAgent implements Agent
     public World w;
 
     NaiveWorldSolver solver;
-    
+
     public NormalAgent(World w)
     {
         this.w = w;
     }
-    
+
     public void setValues(double[] inputs, double[] outputs)
     {
-        // visible map
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
             int y = i / 4;
+
+            // visible
             if (w.isVisited(x + 1, y + 1))
-            {
                 inputs[i] = 1.0;
-            } else
-            {
+            else
                 inputs[i] = 0.0;
-            }
+
+            // breeze
+            if (w.hasBreeze(x + 1, y + 1))
+                inputs[16 + i] = 1.0;
+            else
+                inputs[16 + i] = 0.0;
+
+            // pit
+            if (w.hasPit(x + 1, y + 1))
+                inputs[16+16 + i] = 1.0;
+            else
+                inputs[16+16 + i] = 0.0;
+
+            // stench
+            if (w.hasPit(x + 1, y + 1))
+                inputs[16+16+16 + i] = 1.0;
+            else
+                inputs[16+16+16 + i] = 0.0;
         }
 
-        //stench map
-        for (int i = 0; i < 16; i++)
-        {
-            int x = i % 4;
-            int y = i / 4;
-            if (w.hasStench(x + 1, y + 1))
-            {
-                inputs[16 + i] = 1.0;
-            } else
-            {
-                inputs[16 + i] = 0.0;
-            }
-        }
-        
         solver = new NaiveWorldSolver(w);
-        
-        for(int i = 0; i < outputs.length; i++)
+
+        for (int i = 0; i < outputs.length; i++)
             outputs[i] = 0.0;
-        
-        if(solver.shootDirY == 1)
+
+        if (solver.shootDirY == 1)
             outputs[16 + 0] = 1.0;
-        else if(solver.shootDirX == 1)
+        else if (solver.shootDirX == 1)
             outputs[16 + 1] = 1.0;
-        else if(solver.shootDirY == -1)
+        else if (solver.shootDirY == -1)
             outputs[16 + 2] = 1.0;
-        else if(solver.shootDirX == -1)
+        else if (solver.shootDirX == -1)
             outputs[16 + 3] = 1.0;
-        else if(solver.targetTile > 0 && solver.targetTile <= outputs.length)
+        else if (solver.targetTile > 0 && solver.targetTile <= outputs.length)
             outputs[solver.targetTile] = 1.0;
     }
 
@@ -75,7 +77,7 @@ public class NormalAgent implements Agent
     {
         int cx = w.getPlayerX();
         int cy = w.getPlayerY();
-        
+
         //Basic action:
         //Grab Gold if we can.
         if (w.hasGlitter(cx, cy))
@@ -90,9 +92,9 @@ public class NormalAgent implements Agent
             w.doAction(World.A_CLIMB);
             return;
         }
-        
+
         solver = new NaiveWorldSolver(w);
-        
+
         if (solver.shootDirX == 1)
         {
             shootEast();
@@ -111,12 +113,13 @@ public class NormalAgent implements Agent
             int dx = 0;
             int dy = 0;
             int target = solver.targetTile;
+
             int ox = 1;
             int oy = 0;
             int minSteps = Integer.MAX_VALUE;
             for (int i = 0; i < 4; i++)
             {
-                
+
                 int x = cx - 1 + ox;
                 int y = cy - 1 + oy;
                 if (w.isValidPosition(x + 1, y + 1))
@@ -131,13 +134,17 @@ public class NormalAgent implements Agent
                     //if(tiles[x+y*4].visible)
                     if (w.isVisited(x + 1, y + 1))
                     {
-                        int steps = search(x, y, target);
-                        if (steps <= minSteps)
+                        int steps = search(x, y, target, true);
+
+                        //System.out.println("Try " + Integer.toString(ox) + ", " + Integer.toString(oy) + "   Steps " + Integer.toString(steps));
+                        if (steps < minSteps)
                         {
                             dx = ox;
                             dy = oy;
                             minSteps = steps;
+                            //System.out.println("Current Best!");
                         }
+
                     }
                 }
                 // 90 degree rotate offset 
@@ -145,6 +152,42 @@ public class NormalAgent implements Agent
                 ox = -oy;
                 oy = temp;
             }
+            //System.out.println("Walk " + Integer.toString(dx) + ", " + Integer.toString(dy) + "///////");
+
+            if (dx == 0 && dy == 0)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    int x = cx - 1 + ox;
+                    int y = cy - 1 + oy;
+                    if (w.isValidPosition(x + 1, y + 1))
+                    {
+                        if (x + y * 4 == target)
+                        {
+                            //System.out.println("TARGET");
+                            dx = ox;
+                            dy = oy;
+                            break;
+                        }
+                        //if(tiles[x+y*4].visible)
+                        if (w.isVisited(x + 1, y + 1))
+                        {
+                            int steps = search(x, y, target, false);
+                            if (steps < minSteps)
+                            {
+                                dx = ox;
+                                dy = oy;
+                                minSteps = steps;
+                            }
+                        }
+                    }
+                    // 90 degree rotate offset 
+                    int temp = ox;
+                    ox = -oy;
+                    oy = temp;
+                }
+            }
+
             if (dx == 1)
             {
                 goEast();
@@ -164,24 +207,33 @@ public class NormalAgent implements Agent
         }
     }
 
-    private int search(int sx, int sy, int target)
+    private int search(int sx, int sy, int target, boolean avoidPit)
     {
         int cx = w.getPlayerX() - 1;
         int cy = w.getPlayerY() - 1;
 
         // x = i%4; y = i/4;
         ArrayList<Integer> open = new ArrayList<>();
+        ArrayList<Integer> openSteps = new ArrayList<>();
         ArrayList<Integer> closed = new ArrayList<>();
 
         open.add(sx + sy * 4);
+        openSteps.add(1);
         closed.add(cx + cy * 4);
 
-        int steps = 0;
+        if (avoidPit && w.hasPit(sx + 1, sy + 1))
+        {
+            return Integer.MAX_VALUE;
+        }
+
         while (!open.isEmpty())
         {
-            steps++;
+            int steps = openSteps.get(0);
+            openSteps.remove(0);
+
             int pos = open.get(0);
             open.remove(0);
+
             closed.add(pos);
             int nx = pos % 4;
             int ny = pos / 4;
@@ -196,11 +248,12 @@ public class NormalAgent implements Agent
                     int index = x + y * 4;
                     if (index == target)
                     {
-                        return steps;
+                        return steps + 1;
                     }
-                    if (!open.contains(index) && !closed.contains(index) && w.isVisited(index % 4 + 1, index / 4 + 1))
+                    if (!open.contains(index) && !closed.contains(index) && w.isVisited(x + 1, y + 1) && (!w.hasPit(x + 1, y + 1) || !avoidPit))
                     {
                         open.add(index);
+                        openSteps.add(steps + 1);
                     }
                 }
                 // rotate offset by 90 degrees
