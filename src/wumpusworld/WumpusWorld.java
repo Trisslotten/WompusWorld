@@ -419,6 +419,8 @@ public class WumpusWorld
         final Vector<WorldMap> maps = mr.readMaps();
         
         double score = 0.0;
+        
+        int numGold = 0;
 
         int testSims = 100;
         for (int i = 0; i < testSims; i++)
@@ -437,12 +439,16 @@ public class WumpusWorld
             // since we divice by testSims we can now how many failed
             if(!a.w.hasGold())
                 score -= testSims * 1000;
-
+            else
+                numGold++;
+            
             score += a.w.getScore();
         }
         score /= (double) testSims;
 
         System.out.println("Average score = " + Double.toString(score));
+        System.out.println("Win ratio = " + Integer.toString(numGold) + "/" + Integer.toString(testSims));
+        
         
         return score;
     }

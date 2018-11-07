@@ -171,8 +171,6 @@ public class NaiveWorldSolver
             }
         }
         
-        
-        
         int px = w.getPlayerX() - 1;
         int py = w.getPlayerY() - 1;
 
