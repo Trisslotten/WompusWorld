@@ -59,9 +59,9 @@ public class MyAgent implements Agent, Comparable
         numInputs, numInputs, numOutputs
     };
 
-    boolean shouldLoadNetwork = false;
-    int generationToLoad = 24799;
-    double trainingSpeed = 0.2;
+    boolean shouldLoadNetwork = true;
+    int generationToLoad = 548599;
+    double trainingSpeed = 0.01;
 
     /**
      * Creates a new instance of your solver agent.
