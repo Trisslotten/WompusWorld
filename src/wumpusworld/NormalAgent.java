@@ -49,7 +49,7 @@ public class NormalAgent implements Agent
                 inputs[16+16 + i] = 0.0;
 
             // stench
-            if (w.hasPit(x + 1, y + 1))
+            if (w.hasStench(x + 1, y + 1))
                 inputs[16+16+16 + i] = 1.0;
             else
                 inputs[16+16+16 + i] = 0.0;

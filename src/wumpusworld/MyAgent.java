@@ -55,12 +55,12 @@ public class MyAgent implements Agent, Comparable
     //layout of NN. First value is size of input layer, last is output layer. Arbitrary number of hidden layers and their sizes.
     int[] layerSizes =
     {
-        numInputs, numInputs+20, numInputs+20, numInputs+20, numOutputs
+        numInputs, numInputs, numOutputs
     };
 
-    boolean shouldLoadNetwork = true;
-    int generationToLoad = 4799;
-    double trainingSpeed = 0.1;
+    boolean shouldLoadNetwork = false;
+    int generationToLoad = 27799;
+    double trainingSpeed = 0.2;
 
     /**
      * Creates a new instance of your solver agent.
@@ -306,7 +306,7 @@ public class MyAgent implements Agent, Comparable
                 layers.get(0).set(16+16+ i, 0.0);
             
             // stench
-            if (w.hasPit(x + 1, y + 1))
+            if (w.hasStench(x + 1, y + 1))
                 layers.get(0).set(16+16+16+ i, 1.0);
             else
                 layers.get(0).set(16+16+16+ i, 0.0);
