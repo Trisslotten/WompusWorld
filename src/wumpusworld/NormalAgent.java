@@ -25,6 +25,13 @@ public class NormalAgent implements Agent
 
     public void setValues(double[] inputs, double[] outputs)
     {
+        for (int i = 0; i < inputs.length; i++)
+            inputs[i] = 0.0;
+
+        int px = w.getPlayerX() - 1;
+        int py = w.getPlayerY() - 1;
+        inputs[px + py * 4] = 1.0;
+
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
@@ -32,27 +39,19 @@ public class NormalAgent implements Agent
 
             // visible
             if (w.isVisited(x + 1, y + 1))
-                inputs[i] = 1.0;
-            else
-                inputs[i] = 0.0;
+                inputs[16 + i] = 1.0;
 
             // breeze
             if (w.hasBreeze(x + 1, y + 1))
-                inputs[16 + i] = 1.0;
-            else
-                inputs[16 + i] = 0.0;
+                inputs[16 + 16 + i] = 1.0;
 
             // pit
             if (w.hasPit(x + 1, y + 1))
-                inputs[16+16 + i] = 1.0;
-            else
-                inputs[16+16 + i] = 0.0;
+                inputs[16 + 16 + 16 + i] = 1.0;
 
             // stench
             if (w.hasStench(x + 1, y + 1))
-                inputs[16+16+16 + i] = 1.0;
-            else
-                inputs[16+16+16 + i] = 0.0;
+                inputs[16 + 16 + 16 + 16 + i] = 1.0;
         }
 
         solver = new NaiveWorldSolver(w);
@@ -68,7 +67,7 @@ public class NormalAgent implements Agent
             outputs[16 + 2] = 1.0;
         else if (solver.shootDirX == -1)
             outputs[16 + 3] = 1.0;
-        else if (solver.targetTile > 0 && solver.targetTile <= outputs.length)
+        else if (solver.targetTile >= 0 && solver.targetTile < outputs.length)
             outputs[solver.targetTile] = 1.0;
     }
 

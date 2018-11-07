@@ -44,11 +44,12 @@ public class MyAgent implements Agent, Comparable
     // for backpropagation 
     ArrayList<ArrayList<Double>> zs = new ArrayList<ArrayList<Double>>();
 
+    // player map  -> 16
     // visible map -> 16
     // breeze map  -> 16
     // pit map     -> 16
     // stench map  -> 16
-    static public int numInputs = 16 + 16 + 16 + 16;
+    static public int numInputs = 16 + 16 + 16 + 16 + 16;
     // target map -> 16
     // shoot dir -> 4
     static public int numOutputs = 16 + 4;
@@ -59,7 +60,7 @@ public class MyAgent implements Agent, Comparable
     };
 
     boolean shouldLoadNetwork = false;
-    int generationToLoad = 27799;
+    int generationToLoad = 24799;
     double trainingSpeed = 0.2;
 
     /**
@@ -277,11 +278,20 @@ public class MyAgent implements Agent, Comparable
 
     public void setInputs()
     {
+        // player map  -> 16
         // visible map -> 16
         // breeze map  -> 16
         // pit map     -> 16
         // stench map  -> 16
 
+        for(int i = 0; i < layers.get(0).size(); i++)
+            layers.get(0).set(i, 0.0);
+        
+        int px = w.getPlayerX()-1;
+        int py = w.getPlayerY()-1;
+        
+        layers.get(0).set(px+py*4, 1.0);
+        
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
@@ -289,28 +299,19 @@ public class MyAgent implements Agent, Comparable
             
             // visible
             if (w.isVisited(x + 1, y + 1))
-                layers.get(0).set(i, 1.0);
-            else
-                layers.get(0).set(i, 0.0);
+                layers.get(0).set(16+i, 1.0);
 
             // breeze
             if (w.hasBreeze(x + 1, y + 1))
-                layers.get(0).set(16 + i, 1.0);
-            else
-                layers.get(0).set(16 + i, 0.0);
+                layers.get(0).set(16+16 + i, 1.0);
 
             // pit
             if (w.hasPit(x + 1, y + 1))
-                layers.get(0).set(16+16+ i, 1.0);
-            else
-                layers.get(0).set(16+16+ i, 0.0);
+                layers.get(0).set(16+16+16+ i, 1.0);
             
             // stench
             if (w.hasStench(x + 1, y + 1))
-                layers.get(0).set(16+16+16+ i, 1.0);
-            else
-                layers.get(0).set(16+16+16+ i, 0.0);
-            
+                layers.get(0).set(16+16+16+16+ i, 1.0);
         }
     }
 

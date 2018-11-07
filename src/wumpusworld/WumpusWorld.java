@@ -137,7 +137,7 @@ public class WumpusWorld
      */
     int numMutations = 20;
     int numGeneration = 500;
-    int numSims = 100000;
+    int numSims = 1000000;
     boolean usePresetMaps = false;
 
     /*
