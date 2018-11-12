@@ -358,6 +358,7 @@ public class NaiveWorldSolver
         if (w.isValidPosition(x + 1, y + 1))
         {
             tiles[x + y * 4].possibleWompus = false;
+            tiles[x + y * 4].hasWompus = false;
             tiles[x + y * 4].wompusProbability = 0.0;
         }
     }

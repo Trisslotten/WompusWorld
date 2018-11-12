@@ -56,12 +56,12 @@ public class MyAgent implements Agent, Comparable
     //layout of NN. First value is size of input layer, last is output layer. Arbitrary number of hidden layers and their sizes.
     int[] layerSizes =
     {
-        numInputs, numInputs, numOutputs
+        numInputs, numInputs+20, numOutputs
     };
 
     boolean shouldLoadNetwork = true;
-    int generationToLoad = 548599;
-    double trainingSpeed = 0.01;
+    int generationToLoad = 125000;
+    double trainingSpeed = 0.3;
 
     /**
      * Creates a new instance of your solver agent.
@@ -420,7 +420,7 @@ public class MyAgent implements Agent, Comparable
         return result;
     }
 
-    void backpropagate(double[][] inputs, double[][] outputs, int numData)
+    void backpropagate(double[][] inputs, double[][] outputs, int numData, double learnRateMult)
     {
         ArrayList<ArrayList<Double>> dw = new ArrayList<>();
         ArrayList<ArrayList<Double>> db = new ArrayList<>();
@@ -500,13 +500,15 @@ public class MyAgent implements Agent, Comparable
             }
         }
 
+        double currLearnRate = learnRateMult * trainingSpeed;
+        
         for (int i = 0; i < dw.size(); i++)
         {
             for (int j = 0; j < dw.get(i).size(); j++)
             {
                 double curr = weights.get(i).get(j);
                 double dweight = dw.get(i).get(j);
-                double result = curr - trainingSpeed * dweight / (double) numData;
+                double result = curr - currLearnRate * dweight / (double) numData;
                 weights.get(i).set(j, result);
             }
         }
@@ -517,7 +519,7 @@ public class MyAgent implements Agent, Comparable
             {
                 double curr = biases.get(i).get(j);
                 double dbias = db.get(i).get(j);
-                double result = curr - trainingSpeed * dbias / (double) numData;
+                double result = curr - currLearnRate * dbias / (double) numData;
                 biases.get(i).set(j, result);
             }
         }
