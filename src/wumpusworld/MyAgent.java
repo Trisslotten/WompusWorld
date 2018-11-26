@@ -61,8 +61,8 @@ public class MyAgent implements Agent, Comparable
     };
 
     boolean shouldLoadNetwork = true;
-    int generationToLoad = 328;
-    double trainingSpeed = 0.2;
+    int generationToLoad = 8872;
+    double trainingSpeed = 0.01;
 
     /**
      * Creates a new instance of your solver agent.

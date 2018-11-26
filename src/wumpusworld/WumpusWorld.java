@@ -143,8 +143,10 @@ public class WumpusWorld
     int numMutations = 20;
     int numGeneration = 500;
     int numSims = 100000000;
-    boolean usePresetMaps = true;
-
+    int numTrainEx = 10;
+    boolean trainWithDefaultMaps = true;
+    boolean testWithDefaultMaps = true;
+    int numTestMaps = 300;
     /*
     ****************************************************************************
     ****************************************************************************
@@ -166,7 +168,7 @@ public class WumpusWorld
         {
             MyAgent a = new MyAgent((World) null);
             int _numSims = 1;
-            if (usePresetMaps)
+            if (trainWithDefaultMaps)
             {
                 _numSims = maps.size();
                 for (int i = 0; i < maps.size(); i++)
@@ -262,7 +264,7 @@ public class WumpusWorld
                             a.biases.get(layer).set(biasIndex, rand.nextDouble() * 2.0 - 1);
                         }
                         int _numSims = numSims;
-                        if (usePresetMaps)
+                        if (trainWithDefaultMaps)
                         {
                             _numSims = maps.size();
                             for (int i = 0; i < _numSims; i++)
@@ -362,47 +364,51 @@ public class WumpusWorld
         NormalAgent solver = new NormalAgent((World) null);
 
         int maxActions = 60;
-        double[][] inputs = new double[maxActions][MyAgent.numInputs];
-        double[][] outputs = new double[maxActions][MyAgent.numOutputs];
-
+        
+        int index = 0;
+        double[][] inputs = new double[numTrainEx][MyAgent.numInputs];
+        double[][] outputs = new double[numTrainEx][MyAgent.numOutputs];
+        
+        int generation = 0;
+        
         double bestScore = -10000.0;
 
         FutureTask testTask = null;
-
+        
         //int offset = rand.nextInt() / 2;
         for (int i = 0; i < numSims; i++)
         {
-            WorldMap w = MapGenerator.getRandomMap(rand.nextInt());
-            solver.w = w.generateWorld();
-
-            //solver.w = maps.get(i%7).generateWorld();
+            if(trainWithDefaultMaps) 
+            {
+                solver.w = maps.get(i%7).generateWorld();
+            } 
+            else
+            {
+                WorldMap w = MapGenerator.getRandomMap(rand.nextInt());
+                solver.w = w.generateWorld();
+            }
+            
+            
             int actions = 0;
             while (!solver.w.gameOver() && actions < maxActions)
             {
-                double[] currIn = inputs[actions];
-                double[] currOut = outputs[actions];
+                double[] currIn = inputs[index];
+                double[] currOut = outputs[index];
                 solver.setValues(currIn, currOut);
                 solver.doAction();
                 actions++;
+                index++;
+                
+                if(index >= numTrainEx)
+                {
+                    generation++;
+                    double learnRateMult = 1.0;
+                    agent.backpropagate(inputs, outputs, numTrainEx, learnRateMult);
+                    index = 0;
+                }
             }
-            double learnRateMult = 1.0;
 
-            /*
-            agent.w = w.generateWorld();
-            int nnActions = 0;
-            while(!agent.w.gameOver() && nnActions < maxActions)
-            {
-                agent.doAction();
-                nnActions++;
-            }
-            if(!agent.w.hasGold() && nnActions != 1)
-            {
-                learnRateMult = 5.0;
-            }
-            //System.out.println(solver.w.getScore());
-             */
-            agent.backpropagate(inputs, outputs, actions, learnRateMult);
-
+            
             
             if (testTask == null || testTask.isDone())
             {
@@ -449,7 +455,7 @@ public class WumpusWorld
                         this.i = i;
                         return this;
                     }
-                }.init(bestScore, i));
+                }.init(bestScore, generation));
                 executor.execute(testTask);
             }
         }
@@ -472,14 +478,22 @@ public class WumpusWorld
 
         int numGold = 0;
 
-        //int testSims = 500;
-        int testSims = 7;
+        int testSims = numTestMaps;
+        if(testWithDefaultMaps)
+            testSims = 7;
         for (int i = 0; i < testSims; i++)
         {
-            //WorldMap w = MapGenerator.getRandomMap(i);
-            //a.w = w.generateWorld();
-
-            a.w = maps.get(i).generateWorld();
+            if(testWithDefaultMaps)
+            {
+                a.w = maps.get(i).generateWorld();
+            }
+            else
+            {
+                WorldMap w = MapGenerator.getRandomMap(i);
+                a.w = w.generateWorld();
+            }
+            
+            //
             int actions = 0;
             while (!a.w.gameOver() && actions < 60)
             {
