@@ -257,6 +257,7 @@ public class GUI implements ActionListener
                 i--;
                 w = maps.get(i).generateWorld();
             }
+            //agent = new NormalAgent(w);
             agent = new MyAgent(w);
             updateGame();
         }
@@ -264,6 +265,7 @@ public class GUI implements ActionListener
         {
             if (agent == null)
             {
+                //agent = new NormalAgent(w);
                 agent = new MyAgent(w);
             }
             agent.doAction();

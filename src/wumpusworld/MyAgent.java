@@ -49,19 +49,20 @@ public class MyAgent implements Agent, Comparable
     // breeze map  -> 16
     // pit map     -> 16
     // stench map  -> 16
-    static public int numInputs = 16 + 16 + 16 + 16 + 16;
+    // hasArrow     -> 1
+    static public int numInputs = 16 + 16 + 16 + 16 + 16 + 1;
     // target map -> 16
     // shoot dir -> 4
     static public int numOutputs = 16 + 4;
     //layout of NN. First value is size of input layer, last is output layer. Arbitrary number of hidden layers and their sizes.
     int[] layerSizes =
     {
-        numInputs, numInputs+20, numOutputs
+        numInputs, numInputs, numOutputs
     };
 
     boolean shouldLoadNetwork = true;
-    int generationToLoad = 125000;
-    double trainingSpeed = 0.3;
+    int generationToLoad = 328;
+    double trainingSpeed = 0.2;
 
     /**
      * Creates a new instance of your solver agent.
@@ -283,6 +284,7 @@ public class MyAgent implements Agent, Comparable
         // breeze map  -> 16
         // pit map     -> 16
         // stench map  -> 16
+        // has arrow   -> 1
 
         for(int i = 0; i < layers.get(0).size(); i++)
             layers.get(0).set(i, 0.0);
@@ -313,6 +315,10 @@ public class MyAgent implements Agent, Comparable
             if (w.hasStench(x + 1, y + 1))
                 layers.get(0).set(16+16+16+16+ i, 1.0);
         }
+        if(w.hasArrow())
+            layers.get(0).set(16+16+16+16+16, 1.0);
+        else
+            layers.get(0).set(16+16+16+16+16, -1.0);
     }
 
     double ReLU(double x)
@@ -472,6 +478,7 @@ public class MyAgent implements Agent, Comparable
                     double right = delta.get(rightNode);
                     double weight = left * right;
                     currDw.set(j, weight + currDw.get(j));
+                    //currDw.set(j, weight*(1.0 + 1*e/(double)numData) + currDw.get(j));
                 }
                 ArrayList<Double> currDb = db.get(i);
                 for (int j = 0; j < currDb.size(); j++)

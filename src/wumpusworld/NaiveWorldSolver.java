@@ -42,6 +42,28 @@ public class NaiveWorldSolver
         {
             tiles[i] = new Tile();
         }
+
+        int visited = 0;
+        for (int i = 0; i < 16; i++)
+        {
+            int x = i % 4;
+            int y = i / 4;
+            if (w.isVisited(x + 1, y + 1))
+            {
+                visited++;
+            }
+        }
+        if (visited == 1 && w.hasStench(1, 1) && w.hasArrow())
+        {
+            shootDirX = 1;
+        } else
+        {
+            solve();
+        }
+    }
+
+    private void solve()
+    {
         for (int i = 0; i < 16; i++)
         {
             int x = i % 4;
@@ -82,8 +104,8 @@ public class NaiveWorldSolver
                 ox = -oy;
                 oy = temp;
             }
-            
-            if (!w.isVisited(x+1, y+1) && stenchCount >= 2)
+
+            if (!w.isVisited(x + 1, y + 1) && stenchCount >= 2)
             {
                 tiles[i].hasWompus = true;
                 tiles[i].wompusProbability = 1.0;
@@ -170,7 +192,7 @@ public class NaiveWorldSolver
                 }
             }
         }
-        
+
         int px = w.getPlayerX() - 1;
         int py = w.getPlayerY() - 1;
 
@@ -193,22 +215,20 @@ public class NaiveWorldSolver
             int index = possibleTargets.get(i);
             int currLength = searchAvoidPit(index);
             Tile t = tiles[index];
-            
-            
+
             if (currLength < Integer.MAX_VALUE && t.wompusProbability <= 0.0)
             {
                 if (t.pitProbability < lowestPitProb)
                 {
                     lowestPitProb = t.pitProbability;
                     best = index;
-                } else if(t.pitProbability == lowestPitProb && currLength < length)
+                } else if (t.pitProbability == lowestPitProb && currLength < length)
                 {
                     length = currLength;
                     best = index;
                 }
             }
         }
-        
 
         if (best == -1)
         {
@@ -248,29 +268,31 @@ public class NaiveWorldSolver
         }
 
         targetTile = best;
-        
-        int ox = 1;
-        int oy = 0;
-        for (int i = 0; i < 4; i++)
+
+        if (w.hasArrow())
         {
-            int x = px + ox;
-            int y = py + oy;
-            if (w.isValidPosition(x + 1, y + 1))
+            int ox = 1;
+            int oy = 0;
+            for (int i = 0; i < 4; i++)
             {
-                Tile t = tiles[x + y * 4];
-                if (t.hasWompus || t.wompusProbability == 1.0)
+                int x = px + ox;
+                int y = py + oy;
+                if (w.isValidPosition(x + 1, y + 1))
                 {
-                    shootDirX = ox;
-                    shootDirY = oy;
-                    break;
+                    Tile t = tiles[x + y * 4];
+                    if (t.hasWompus || t.wompusProbability == 1.0)
+                    {
+                        shootDirX = ox;
+                        shootDirY = oy;
+                        break;
+                    }
                 }
+                // 90 degree rotate offset 
+                int temp = ox;
+                ox = -oy;
+                oy = temp;
             }
-            // 90 degree rotate offset 
-            int temp = ox;
-            ox = -oy;
-            oy = temp;
         }
-        
     }
 
     private int searchAvoidPit(int target)

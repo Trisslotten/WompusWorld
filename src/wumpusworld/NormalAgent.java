@@ -53,6 +53,10 @@ public class NormalAgent implements Agent
             if (w.hasStench(x + 1, y + 1))
                 inputs[16 + 16 + 16 + 16 + i] = 1.0;
         }
+        if(w.hasArrow())
+            inputs[16 + 16 + 16 + 16 + 16] = 1.0;
+        else
+            inputs[16 + 16 + 16 + 16 + 16] = -1.0;
 
         solver = new NaiveWorldSolver(w);
 

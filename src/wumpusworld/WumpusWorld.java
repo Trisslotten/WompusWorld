@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Random;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -33,8 +34,8 @@ public class WumpusWorld
     }
 
     static Random rand;
-    
-    static 
+
+    static
     {
         rand = new Random(System.currentTimeMillis());
     }
@@ -365,7 +366,9 @@ public class WumpusWorld
         double[][] outputs = new double[maxActions][MyAgent.numOutputs];
 
         double bestScore = -10000.0;
-        
+
+        FutureTask testTask = null;
+
         //int offset = rand.nextInt() / 2;
         for (int i = 0; i < numSims; i++)
         {
@@ -382,7 +385,9 @@ public class WumpusWorld
                 solver.doAction();
                 actions++;
             }
-            
+            double learnRateMult = 1.0;
+
+            /*
             agent.w = w.generateWorld();
             int nnActions = 0;
             while(!agent.w.gameOver() && nnActions < maxActions)
@@ -390,31 +395,62 @@ public class WumpusWorld
                 agent.doAction();
                 nnActions++;
             }
-            double learnRateMult = 1.0;
             if(!agent.w.hasGold() && nnActions != 1)
             {
-                learnRateMult = 2.0;
+                learnRateMult = 5.0;
             }
             //System.out.println(solver.w.getScore());
-
+             */
             agent.backpropagate(inputs, outputs, actions, learnRateMult);
 
-            if (i % 1000 == 0)
+            
+            if (testTask == null || testTask.isDone())
             {
-                System.out.println("Testing generation " + Integer.toString(i));
-                double score = testInTraining(agent);
-                if (score > bestScore)
+                if(testTask != null)
                 {
                     try
                     {
-                        agent.saveNetwork(i);
-
-                    } catch (FileNotFoundException ex)
+                        Double bs = (Double)testTask.get();
+                        bestScore = bs;
+                    } catch (InterruptedException | ExecutionException ex)
                     {
                         Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                    bestScore = score;
                 }
+                
+                final MyAgent toTest = new MyAgent(agent);
+                testTask = new FutureTask(new Callable(){
+                    double bestScore;
+                    int i;
+                    @Override
+                    public Object call() throws Exception
+                    {
+                        System.out.println("Testing generation " + Integer.toString(i));
+                        double score = testInTraining(toTest);
+                        if (score > bestScore)
+                        {
+                            System.out.println("Saving generation " + Integer.toString(i));
+                            try
+                            {
+                                toTest.saveNetwork(i);
+
+                            } catch (FileNotFoundException ex)
+                            {
+                                Logger.getLogger(WumpusWorld.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            bestScore = score;
+                        }
+                        Double bs = bestScore;
+                        return bs;
+                    }
+                    public Callable init(double bestScore, int i)
+                    {
+                        this.bestScore = bestScore;
+                        this.i = i;
+                        return this;
+                    }
+                }.init(bestScore, i));
+                executor.execute(testTask);
             }
         }
 
@@ -436,13 +472,14 @@ public class WumpusWorld
 
         int numGold = 0;
 
-        int testSims = 400;
+        //int testSims = 500;
+        int testSims = 7;
         for (int i = 0; i < testSims; i++)
         {
-            WorldMap w = MapGenerator.getRandomMap(i);
-            a.w = w.generateWorld();
+            //WorldMap w = MapGenerator.getRandomMap(i);
+            //a.w = w.generateWorld();
 
-            //a.w = maps.get(i).generateWorld();
+            a.w = maps.get(i).generateWorld();
             int actions = 0;
             while (!a.w.gameOver() && actions < 60)
             {
