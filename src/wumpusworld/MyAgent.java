@@ -61,8 +61,8 @@ public class MyAgent implements Agent, Comparable
     };
 
     boolean shouldLoadNetwork = true;
-    int generationToLoad = 8872;
-    double trainingSpeed = 0.01;
+    int generationToLoad = 713251;
+    double trainingSpeed = 0.2;
 
     /**
      * Creates a new instance of your solver agent.
@@ -530,7 +530,6 @@ public class MyAgent implements Agent, Comparable
                 biases.get(i).set(j, result);
             }
         }
-
     }
 
     int actionIndex()

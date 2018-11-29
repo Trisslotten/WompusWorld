@@ -140,12 +140,16 @@ public class WumpusWorld
     ********************* Parameters *******************************************
     ****************************************************************************
      */
+    int numSims = 100000000;
+    
+    // genetic stuff
     int numMutations = 20;
     int numGeneration = 500;
-    int numSims = 100000000;
-    int numTrainEx = 10;
-    boolean trainWithDefaultMaps = true;
-    boolean testWithDefaultMaps = true;
+    
+    // backpropagation stuff
+    int numTrainEx = 15;
+    boolean trainWithDefaultMaps = false;
+    boolean testWithDefaultMaps = false;
     int numTestMaps = 300;
     /*
     ****************************************************************************
